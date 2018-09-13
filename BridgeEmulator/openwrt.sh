@@ -12,12 +12,6 @@ mkdir /opt/hue-emulator
 pip3 install requests astral pytz
 wait
 cd /opt/tmp
-git clone https://github.com/Lawouach/WebSocket-for-Python.git
-wait
-cd /opt/tmp/WebSocket-for-Python
-python3 setup.py install
-wait
-cd /opt/tmp
 git clone -b OpenWrt git://github.com/juanesf/diyHue.git
 wait
 cd /opt/tmp/diyHue/BridgeEmulator

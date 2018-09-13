@@ -3,13 +3,13 @@
 
 opkg update
 wait
-opkg install ca-bundle git git-http nano nmap python3 python3-pip openssl-util curl unzip
+opkg install ca-bundle git git-http nano nmap python3 python3-pip openssl-util curl
 wait
 export LC_ALL=C
 mkdir /opt
 mkdir /opt/tmp
 mkdir /opt/hue-emulator
-pip3 install requests ws4py
+pip3 install requests ws4py astral pytz
 wait
 cd /opt/tmp
 git clone -b OpenWrt git://github.com/juanesf/diyHue.git
@@ -22,17 +22,6 @@ cp -r functions protocols debug /opt/hue-emulator/
 cp entertainment-mips /opt/hue-emulator/entertainment-srv
 wait
 cp hueemulator /etc/init.d/
-
-
-wget -q https://github.com/sffjunkie/astral/archive/master.zip -O astral.zip
-wait
-unzip -q -o astral.zip
-wait
-cd astral-master/
-python3 setup.py install
-wait
-cd ../
-rm -rf astral.zip astral-master/
 
 mac=`cat /sys/class/net/$(ip route get 8.8.8.8 | sed -n 's/.* dev \([^ ]*\).*/\1/p')/address`
 curl "http://mariusmotea.go.ro:9002/gencert?mac=$mac" > /opt/hue-emulator/cert.pem

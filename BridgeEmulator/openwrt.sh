@@ -9,12 +9,17 @@ export LC_ALL=C
 mkdir /opt
 mkdir /opt/tmp
 mkdir /opt/hue-emulator
-pip3 install requests ws4py astral pytz
+pip3 install requests astral pytz
+wait
+cd /opt/tmp
+git clone https://github.com/Lawouach/WebSocket-for-Python.git
+wait
+cd /opt/tmp/WebSocket-for-Python
+python3 setup.py install
 wait
 cd /opt/tmp
 git clone -b OpenWrt git://github.com/juanesf/diyHue.git
 wait
-
 cd /opt/tmp/diyHue/BridgeEmulator
 cp HueEmulator3.py config.json updater /opt/hue-emulator/
 cp -r web-ui /opt/hue-emulator/
@@ -46,16 +51,3 @@ echo -e "\033[32m Installation completed.\033[0m"
 rm -Rf /opt/tmp
 wait
 exit 0
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -4,7 +4,6 @@ opkg update
 wait
 opkg install ca-bundle git git-http nano nmap python3 python3-pip openssl-util curl
 wait
-export LC_ALL=C
 mkdir /opt
 mkdir /opt/tmp
 mkdir /opt/hue-emulator
@@ -21,7 +20,7 @@ cp entertainment-mips /opt/hue-emulator/entertainment-srv
 wait
 cp hueemulator /etc/init.d/
 
-mac=`ifconfig br-lan | grep 'inet ' | awk '{print $5}' | sed 's/addr://'`
+mac=`cat /sys/class/net/$(ip route get 8.8.8.8 | sed -n 's/.* dev \([^ ]*\).*/\1/p')/address`
 curl "http://mariusmotea.go.ro:9002/gencert?mac=$mac" > /opt/hue-emulator/cert.pem
 
 chmod +x /etc/init.d/hueemulator

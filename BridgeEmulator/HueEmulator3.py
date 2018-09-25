@@ -36,11 +36,7 @@ docker = False # Set only to true if using script in Docker container
 update_lights_on_startup = False # if set to true all lights will be updated with last know state on startup.
 
 def getIpAddress():
-    if len(sys.argv) == 3:
-       return sys.argv[2]
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    s.connect(("8.8.8.8", 80))
-    return s.getsockname()[0]
+    return "192.168.8.1"
 
 def pretty_json(data):
     return json.dumps(data, sort_keys=True,                  indent=4, separators=(',', ': '))

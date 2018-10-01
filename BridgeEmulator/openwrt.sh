@@ -7,7 +7,7 @@ wait
 mkdir /opt
 mkdir /opt/tmp
 mkdir /opt/hue-emulator
-pip3 install requests astral pytz ws4py
+pip3 install requests astral pytz
 wait
 cd /opt/tmp
 git clone -b OpenWrt git://github.com/juanesf/diyHue.git

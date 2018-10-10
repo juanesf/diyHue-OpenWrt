@@ -210,7 +210,7 @@ def sendEmail(triggered_sensor):
         server_ssl.sendmail(bridge_config["alarm_config"]["mail_from"], bridge_config["alarm_config"]["mail_recipients"], message)
         server_ssl.close()
         logging.debug("successfully sent the mail")
-        
+
         return True
     except:
         logging.exception("failed to send mail")
@@ -297,7 +297,10 @@ def schedulerProcessor():
             saveConfig()
             Thread(target=daylightSensor).start()
             if (datetime.now().strftime("%H") == "23" and datetime.now().strftime("%A") == "Sunday"): #backup config every Sunday at 23:00:10
-                saveConfig("export/config-backup-" + datetime.now().strftime("%Y-%m-%d") + ".json")
+                if docker:
+                    saveConfig("export/config-backup-" + datetime.now().strftime("%Y-%m-%d") + ".json")
+                else:
+                    saveConfig("config-backup-" + datetime.now().strftime("%Y-%m-%d") + ".json")
         sleep(1)
 
 def switchScene(group, direction):
@@ -475,7 +478,6 @@ def sendLightRequest(light, data):
             if "protocols." + protocol_name == protocol.__name__:
                 try:
                     light_state = protocol.set_light(bridge_config["lights_address"][light]["ip"], bridge_config["lights"][light], data)
-                    bridge_config["lights"][light]["state"].update(light_state)
                 except:
                     bridge_config["lights"][light]["state"]["reachable"] = False
                     logging.exception("request error")
@@ -505,6 +507,18 @@ def sendLightRequest(light, data):
                         url += "&switchcmd=Off"
                 elif key == "bri":
                     url += "&switchcmd=Set%20Level&level=" + str(round(float(value)/255*100)) # domoticz range from 0 to 100 (for zwave devices) instead of 0-255 of bridge
+
+        elif bridge_config["lights_address"][light]["protocol"] == "jeedom": #Jeedom protocol
+            url = "http://" + bridge_config["lights_address"][light]["ip"] + "/core/api/jeeApi.php?apikey=" + bridge_config["lights_address"][light]["light_api"] + "&type=cmd&id="
+            method = 'GET'
+            for key, value in data.items():
+                if key == "on":
+                    if value:
+                        url += bridge_config["lights_address"][light]["light_on"]
+                    else:
+                        url += bridge_config["lights_address"][light]["light_off"]
+                elif key == "bri":
+                    url += bridge_config["lights_address"][light]["light_slider"] + "&slider=" + str(round(float(value)/255*100)) # jeedom range from 0 to 100 (for zwave devices) instead of 0-255 of bridge
 
         elif bridge_config["lights_address"][light]["protocol"] == "milight": #MiLight bulb
             url = "http://" + bridge_config["lights_address"][light]["ip"] + "/gateways/" + bridge_config["lights_address"][light]["device_id"] + "/" + bridge_config["lights_address"][light]["mode"] + "/" + str(bridge_config["lights_address"][light]["group"])
@@ -723,8 +737,9 @@ def syncWithLights(): #update Hue Bridge lights states
                         bridge_config["lights"][light]["state"]["colormode"] = "ct"
                         bridge_config["lights"][light]["state"]["ct"] = light_data["color_temp"] * 1.6
                     elif "bulb_mode" in light_data and light_data["bulb_mode"] == "color":
-                        bridge_config["lights"][light]["state"]["colormode"] = "xy"
-                        bridge_config["lights"][light]["state"]["xy"] = convert_rgb_xy(light_data["color"]["r"], light_data["color"]["g"], light_data["color"]["b"])
+                        bridge_config["lights"][light]["state"]["colormode"] = "hs"
+                        bridge_config["lights"][light]["state"]["hue"] = light_data["hue"] * 180
+                        bridge_config["lights"][light]["state"]["sat"] = int(light_data["saturation"] * 2.54)
                 elif bridge_config["lights_address"][light]["protocol"] == "domoticz": #domoticz protocol
                     light_data = json.loads(sendRequest("http://" + bridge_config["lights_address"][light]["ip"] + "/json.htm?type=devices&rid=" + bridge_config["lights_address"][light]["light_id"], "GET", "{}"))
                     if light_data["result"][0]["Status"] == "Off":
@@ -732,6 +747,13 @@ def syncWithLights(): #update Hue Bridge lights states
                     else:
                          bridge_config["lights"][light]["state"]["on"] = True
                     bridge_config["lights"][light]["state"]["bri"] = str(round(float(light_data["result"][0]["Level"])/100*255))
+                elif bridge_config["lights_address"][light]["protocol"] == "jeedom": #jeedom protocol
+                    light_data = json.loads(sendRequest("http://" + bridge_config["lights_address"][light]["ip"] + "/core/api/jeeApi.php?apikey=" + bridge_config["lights_address"][light]["light_api"] + "&type=cmd&id=" + bridge_config["lights_address"][light]["light_id"], "GET", "{}"))
+                    if light_data == 0:
+                         bridge_config["lights"][light]["state"]["on"] = False
+                    else:
+                         bridge_config["lights"][light]["state"]["on"] = True
+                    bridge_config["lights"][light]["state"]["bri"] = str(round(float(light_data)/100*255))
 
                 bridge_config["lights"][light]["state"]["reachable"] = True
                 updateGroupStats(light)
@@ -1043,6 +1065,10 @@ class S(BaseHTTPRequestHandler):
         self.wfile.write(data)
 
     def do_GET(self):
+        #Some older Philips Tv's sent non-standard HTTP GET requests with a Content-Lenght and a
+        # body. The HTTP body needs to be consumed and ignored in order to request be handle correctly.
+        self.read_http_request_body()
+
         if self.path == '/' or self.path == '/index.html':
             self._set_headers()
             f = open(cwd + '/web-ui/index.html')
@@ -1257,6 +1283,7 @@ class S(BaseHTTPRequestHandler):
                 bridge_config["config"]["UTC"] = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S")
                 bridge_config["config"]["localtime"] = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
                 bridge_config["config"]["whitelist"][url_pices[2]]["last use date"] = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+                bridge_config["config"]["linkbutton"] = int(bridge_config["linkbutton"]["lastlinkbuttonpushed"]) + 30 >= int(datetime.now().strftime("%s"))
                 if len(url_pices) == 3 or (len(url_pices) == 4 and url_pices[3] == ""): #print entire config
                     self._set_end_headers(bytes(json.dumps({"lights": bridge_config["lights"], "groups": bridge_config["groups"], "config": bridge_config["config"], "scenes": bridge_config["scenes"], "schedules": bridge_config["schedules"], "rules": bridge_config["rules"], "sensors": bridge_config["sensors"], "resourcelinks": bridge_config["resourcelinks"]},separators=(',', ':')), "utf8"))
                 elif len(url_pices) == 4 or (len(url_pices) == 5 and url_pices[4] == ""): #print specified object config
@@ -1284,12 +1311,15 @@ class S(BaseHTTPRequestHandler):
             else: #user is not in whitelist
                 self._set_end_headers(bytes(json.dumps([{"error": {"type": 1, "address": self.path, "description": "unauthorized user" }}],separators=(',', ':')), "utf8"))
 
+    def read_http_request_body(self):
+        return b"{}" if self.headers['Content-Length'] is None or self.headers[
+            'Content-Length'] == '0' else self.rfile.read(int(self.headers['Content-Length']))
 
     def do_POST(self):
         self._set_headers()
         logging.debug("in post method")
         logging.debug(self.path)
-        self.data_string = b"{}" if self.headers['Content-Length'] is None or self.headers['Content-Length'] == '0' else self.rfile.read(int(self.headers['Content-Length']))
+        self.data_string = self.read_http_request_body()
         if self.path == "/updater":
             logging.debug("check for updates")
             update_data = json.loads(sendRequest("http://raw.githubusercontent.com/mariusmotea/diyHue/master/BridgeEmulator/updater", "GET", "{}"))

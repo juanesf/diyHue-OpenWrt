@@ -998,7 +998,8 @@ def scanDeconz():
                     bridge_config["deconz"]["sensors"][sensor] = {"bridgeid": newMotionSensorId, "triggered": False, "modelid": deconz_sensors[sensor]["modelid"]}
                 else:
                     bridge_config["sensors"][new_sensor_id] = deconz_sensors[sensor]
-                    bridge_config["deconz"]["sensors"][sensor] = {"bridgeid": new_sensor_id}
+                    bridge_config["deconz"]["sensors"][sensor] = {"bridgeid": new_sensor_id, "modelid": deconz_sensors[sensor]["modelid"]}
+
             else: #temporary patch for config compatibility with new release
                 bridge_config["deconz"]["sensors"][sensor]["modelid"] = deconz_sensors[sensor]["modelid"]
                 bridge_config["deconz"]["sensors"][sensor]["type"] = deconz_sensors[sensor]["type"]
@@ -1025,6 +1026,8 @@ def manageDeviceLights(lights_state):
     for light in lights_state.keys():
         if protocol in ["native","milight"]:
             sendLightRequest(light, lights_state[light])
+            if protocol == "milight": #hotfix to avoid milight hub overload
+                sleep(0.05)
         else:
             Thread(target=sendLightRequest, args=[light, lights_state[light]]).start()
             sleep(0.1)

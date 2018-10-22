@@ -493,7 +493,7 @@
       ]
    },
    "config":{
-      "name":"Philips hue",
+      "name":"diyHueWrt",
       "zigbeechannel":25,
       "bridgeid":"001788FFFE29864E",
       "mac":"00:17:88:29:85:3e",

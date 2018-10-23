@@ -2,6 +2,8 @@
 
 SCRIPT_NAME="HueEmulator3.py"
 SCRIPT_PATH="/opt/hue-emulator"
+LED_PATH="/sys/class/leds"
+LED=` ls $LED_PATH | grep wlan`
 
 START=98
 
@@ -11,3 +13,5 @@ sleep 3
 echo "Starting $SCRIPT_NAME"
 python3 $SCRIPT_PATH/$SCRIPT_NAME &
 }
+echo none > $LED_PATH/$LED/trigger
+echo 1 > $LED_PATH/$LED/brightness

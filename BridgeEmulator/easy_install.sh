@@ -76,7 +76,7 @@ else
 	curl https://raw.githubusercontent.com/mariusmotea/diyHue/9ceed19b4211aa85a90fac9ea6d45cfeb746c9dd/BridgeEmulator/openssl.conf -o openssl.conf
 	serial="${mac:0:2}${mac:3:2}${mac:6:2}fffe${mac:9:2}${mac:12:2}${mac:15:2}"
 	dec_serial=`python3 -c "print(int(\"$serial\", 16))"`
-	openssl req -new  -config openssl.conf  -nodes -x509 -newkey  ec -pkeyopt ec_paramgen_curve:P-256 -pkeyopt ec_param_enc:named_curve   -subj "/C=NL/O=Philips Hue/CN=$serial" -keyout private.key -out public.crt -set_serial $dec_serial
+	openssl req -new  -config openssl.conf  -nodes -x509 -newkey  ec -pkeyopt ec_paramgen_curve:P-256 -pkeyopt ec_param_enc:named_curve   -subj "/C=NL/O=Philips Hue/CN=$serial" -keyout private.key -out public.crt -set_serial $dec_serial -days 3650
 	if [ $? -ne 0 ] ; then
 		echo -e "\033[31m ERROR!! Local certificate generation failed! Attempting remote server generation\033[0m"
 		### test is server for certificate generation is reachable
@@ -97,9 +97,16 @@ if [ $(uname -m) = "x86_64" ]; then
 	cp entertainment-x86_64 /opt/hue-emulator/entertainment-srv
 	cp coap-client-x86_64 /opt/hue-emulator/coap-client-linux
 else
-	cp entertainment-arm /opt/hue-emulator/entertainment-srv
+	if [ $(uname -m) = "i686" ]; then
+		cp entertainment-x86 /opt/hue-emulator/entertainment-srv
+        cp coap-client-linux-x86 /opt/hue-emulator/coap-client-linux
+        else
+        cp entertainment-arm /opt/hue-emulator/entertainment-srv
         cp coap-client-arm /opt/hue-emulator/coap-client-linux
+	fi
 fi
+chmod +x /opt/hue-emulator/entertainment-srv
+chmod +x /opt/hue-emulator/coap-client-linux
 cp hue-emulator.service /lib/systemd/system/
 cd ../../
 rm -rf diyHue.zip diyHue-master
